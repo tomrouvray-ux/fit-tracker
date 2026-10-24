@@ -4,6 +4,7 @@ import { state, save, uid, dayKey, toDisplayW, fromDisplayW, wUnit } from './sto
 import { esc, sheet, toast, confirmSheet, fmtDuration, fmtDate, fmtClock, r1, bar } from './ui.js';
 import { loadLibrary, getExercise, search, imageUrl, demo, isTimed, STARTERS, WEEKDAYS, MUSCLES, EQUIPMENT } from './exercises.js';
 import { go, rerender } from './app.js';
+import { muscleCard, bindMuscles } from './muscles.js';
 
 // ---------- history helpers ----------
 
@@ -62,6 +63,8 @@ export function renderTrain(root) {
         : `<p class="muted small" style="margin:0 0 10px">${state.routines.length ? 'Rest day in your plan.' : 'No routines yet. Load a starter plan or make your own.'}</p>`}
       <button class="btn block" data-act="empty">Start an empty workout</button></div>` : ''}
 
+    ${muscleCard()}
+
     <div class="section-title">Routines</div>
     <div class="card">
       ${state.routines.length ? `<ul class="list">${state.routines.map(r => `
@@ -85,6 +88,7 @@ export function renderTrain(root) {
         ${w.prs ? `<span class="chip pr">${w.prs} PR</span>` : ''}</li>`).join('')}</ul>` : '<div class="empty">Finished workouts show up here.</div>'}
     </div>`;
 
+  bindMuscles(root);
   root.onclick = e => {
     const t = e.target.closest('[data-act],[data-start],[data-edit],[data-hist]');
     if (!t) return;
