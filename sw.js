@@ -1,5 +1,5 @@
 // Offline support: cache the app shell, always go to the network for APIs.
-const CACHE = 'fittrack-v1';
+const CACHE = 'fittrack-v2';
 const SHELL = [
   './', 'index.html', 'css/app.css', 'manifest.webmanifest', 'data/exercises.json',
   'js/app.js', 'js/store.js', 'js/ui.js', 'js/exercises.js', 'js/train.js', 'js/food.js', 'js/off.js',
