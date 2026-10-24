@@ -48,6 +48,21 @@
   --shadow: none; color-scheme: dark;
 }
 
+/* Dark blue, in the spirit of MyFitnessPal */
+:root[data-theme="navy"] {
+  --bg: #08142b; --surface: #10203f; --surface-2: #182c52; --line: #23396a;
+  --text: #eef3fb; --muted: #9db0d0; --accent: #2f8cff; --accent-ink: #ffffff; --accent-soft: #15315f;
+  --warn: #f0985c; --danger: #ff6b6b; --protein: #7fd4ff; --carbs: #f1b84a; --fat: #e07cc0; --garmin: #5ec8ff;
+  --shadow: none; color-scheme: dark;
+}
+/* Black and orange */
+:root[data-theme="orange"] {
+  --bg: #000000; --surface: #111111; --surface-2: #1c1c1c; --line: #2b2b2b;
+  --text: #f5f5f5; --muted: #a3a3a3; --accent: #ff7a1a; --accent-ink: #160900; --accent-soft: #3a1d06;
+  --warn: #ffb347; --danger: #ff5c5c; --protein: #6ea8ff; --carbs: #ffd23f; --fat: #e07cc0; --garmin: #4db3f0;
+  --shadow: none; color-scheme: dark;
+}
+
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html, body { margin: 0; }

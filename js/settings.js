@@ -71,7 +71,7 @@ export function renderSettings(root) {
     <div class="section-title">App</div>
     <div class="card">
       <label class="field"><span>Units</span>${sel('units', [['kg', 'Kilograms, km'], ['lb', 'Pounds, miles']], s.units)}</label>
-      <label class="field"><span>Theme</span>${sel('theme', [['auto', 'Match system'], ['light', 'Light'], ['dark', 'Dark']], s.theme)}</label>
+      <label class="field"><span>Theme</span>${sel('theme', [['auto', 'Match system'], ['light', 'Light'], ['dark', 'Dark'], ['navy', 'Dark blue'], ['orange', 'Black and orange']], s.theme)}</label>
       <label class="field"><span>Week starts on</span>${sel('weekstart', [[1, 'Monday'], [0, 'Sunday']], s.weekStart)}</label>
       <label class="field"><span>Default rest between sets (seconds)</span><input type="number" inputmode="numeric" id="rest" value="${s.restDefault}"></label>
       <label class="check"><input type="checkbox" id="sound" ${s.restSound ? 'checked' : ''}> Beep when rest is over</label>

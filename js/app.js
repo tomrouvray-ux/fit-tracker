@@ -46,6 +46,9 @@ function applyTheme() {
   const t = state.settings.theme;
   if (t === 'auto') document.documentElement.removeAttribute('data-theme');
   else document.documentElement.setAttribute('data-theme', t);
+  // Match the phone's status bar to the theme background.
+  const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+  if (bg) document.querySelector('meta[name=theme-color]').setAttribute('content', bg);
 }
 export { applyTheme };
 
