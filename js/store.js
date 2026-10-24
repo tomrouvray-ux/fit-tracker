@@ -14,6 +14,7 @@ export function defaultState() {
       weekStart: 1,
       restDefault: 90,
       restSound: true,
+      showDemos: true,
       calorieGoal: 2200,
       macroPct: { p: 30, c: 40, f: 30 },
       waterGoal: 2500,

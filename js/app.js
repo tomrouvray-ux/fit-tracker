@@ -67,7 +67,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 async function start() {
   await load();
   applyTheme();
-  loadLibrary().then(() => { if (current === 'workout' || current === 'train') rerender(); });
+  loadLibrary().then(() => { if (['workout', 'train', 'today'].includes(current)) rerender(); });
   let saved = null;
   try { saved = sessionStorage.getItem('route'); } catch (e) {}
   go(state.activeWorkout ? 'workout' : saved || 'today');

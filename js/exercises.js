@@ -34,6 +34,24 @@ export function imageUrl(ex, i = 0) {
   return IMG_BASE + encodeURI(ex.id) + '/' + i + '.jpg';
 }
 
+// Animated demo: the start and end photos crossfade like a GIF. Tap to pause.
+export function demo(ex, { thumb = false, minimize = false } = {}) {
+  if (!imageUrl(ex)) return '';
+  const name = ex.n.replace(/"/g, '&quot;');
+  return `<div class="demo ${thumb ? 'thumb' : ''}" data-demo ${thumb ? 'data-demoshow' : ''}>
+    <img src="${imageUrl(ex, 0)}" alt="${name}, start position" loading="lazy"><img src="${imageUrl(ex, 1)}" alt="${name}, end position" loading="lazy">
+    ${thumb ? '' : `<div class="demo-btns">${minimize ? '<button data-demomin>Minimize</button>' : '<span></span>'}<button data-demopause>Pause</button></div>`}
+  </div>`;
+}
+
+document.addEventListener('click', e => {
+  const d = e.target.closest('[data-demo]');
+  if (!d || d.hasAttribute('data-demoshow') || e.target.closest('[data-demomin]')) return;
+  const paused = d.classList.toggle('paused');
+  const b = d.querySelector('[data-demopause]');
+  if (b) b.textContent = paused ? 'Play' : 'Pause';
+});
+
 export const MUSCLES = ['chest', 'shoulders', 'triceps', 'biceps', 'forearms', 'lats', 'middle back', 'lower back', 'traps', 'abdominals', 'quadriceps', 'hamstrings', 'glutes', 'calves', 'adductors', 'abductors', 'neck'];
 export const EQUIPMENT = ['barbell', 'dumbbell', 'cable', 'machine', 'body only', 'kettlebells', 'bands', 'e-z curl bar', 'medicine ball', 'exercise ball', 'foam roll', 'other'];
 

@@ -10,7 +10,7 @@ Your data stays on your device. There is no server and no account.
 - Routines for each weekday, with three starter plans (Push/Pull/Legs, Upper/Lower, Full Body) that you can edit.
 - Guided sessions: weights and reps carry over from last time, a rest timer runs after each set and beeps when it ends, and the screen stays awake.
 - Detects personal records from estimated 1RM, marks warm-up sets, and lets you add, swap and reorder exercises mid-session.
-- A library of 870+ exercises with photos and how-to steps, searchable by muscle and equipment. You can add your own exercises too.
+- A library of 870+ exercises with animated demos (the start and end photos play like a GIF) and how-to steps, searchable by muscle and equipment. You can add your own exercises too.
 
 **Food**
 - A daily diary for breakfast, lunch, dinner and snacks, with calories left (goal − food + exercise) and protein, carbs and fat.
@@ -23,6 +23,10 @@ Your data stays on your device. There is no server and no account.
 - Syncs activities, steps, sleep, resting HR, HRV and weight from Garmin through [Intervals.icu](https://intervals.icu). It syncs when the app opens and when you tap Sync.
 - You can also import `.fit`, `.zip` (Garmin Connect's "Export Original"), `.gpx` and `.tcx` files, or add an activity by hand.
 - Garmin calories can count toward your daily food budget.
+
+**Today**
+- A "This week" strip: tap a day to see the workout you did or have planned, and start today's routine from there.
+- A muscle map with three views: balance (sets per muscle over a week, 30 or 90 days), fatigue (recent sets, recovering over about three days) and strength (change in estimated 1RM over the last 30 days).
 
 **Progress**
 - Body weight trend, calories over the last 14 days, training hours per week, a 26-week consistency heatmap and recent PRs.
@@ -58,4 +62,5 @@ Then open http://localhost:8000.
 
 - Exercises: [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (public domain).
 - Food data: McCance and Widdowson's [Composition of Foods Integrated Dataset](https://www.gov.uk/government/publications/composition-of-foods-integrated-dataset-cofid) (Open Government Licence v3.0), built into `data/foods-uk.json` by `tools/build_cofid.py`; [Open Food Facts](https://world.openfoodfacts.org) (ODbL); [USDA FoodData Central](https://fdc.nal.usda.gov) (public domain).
+- Body map shapes: [react-body-highlighter](https://github.com/GV79/react-body-highlighter) (MIT).
 - Workout flow inspired by [openGym](https://github.com/DuarteSantos8/openGym).

@@ -2,7 +2,7 @@
 
 import { state, save, uid, dayKey, toDisplayW, fromDisplayW, wUnit } from './store.js';
 import { esc, sheet, toast, confirmSheet, fmtDuration, fmtDate, fmtClock, r1, bar } from './ui.js';
-import { loadLibrary, getExercise, search, imageUrl, isTimed, STARTERS, WEEKDAYS, MUSCLES, EQUIPMENT } from './exercises.js';
+import { loadLibrary, getExercise, search, imageUrl, demo, isTimed, STARTERS, WEEKDAYS, MUSCLES, EQUIPMENT } from './exercises.js';
 import { go, rerender } from './app.js';
 
 // ---------- history helpers ----------
@@ -287,8 +287,7 @@ export function showExercise(id) {
     if (top) hist.push({ date: w.start, best, top });
   }
   sheet(x.n, body => {
-    const imgs = imageUrl(x) ? `<div class="ex-imgs"><img src="${imageUrl(x, 0)}" alt="Start position"><img src="${imageUrl(x, 1)}" alt="End position"></div>` : '';
-    body.innerHTML = `${imgs}
+    body.innerHTML = `${demo(x)}
       <p class="small muted">${esc((x.m || []).join(', '))}${x.s && x.s.length ? ` · also ${esc(x.s.join(', '))}` : ''} · ${esc(x.e)}${x.l ? ` · ${esc(x.l)}` : ''}</p>
       ${hist.length ? `<div class="card"><h2>Your history <small>best est. 1RM ${toDisplayW(Math.max(...hist.map(h => h.best)))} ${wUnit()}</small></h2>
         ${hist.length > 1 ? lineChart(hist.slice().reverse().map(h => ({ x: h.date, y: toDisplayW(h.best) }))) : ''}
@@ -299,7 +298,7 @@ export function showExercise(id) {
 
 // ---------- workout session ----------
 
-function startWorkout(routine) {
+export function startWorkout(routine) {
   if (state.activeWorkout) return go('workout');
   const w = {
     id: uid(),
@@ -359,8 +358,10 @@ export function renderWorkout(root) {
       const x = getExercise(ex.exId);
       const timed = isTimed(x);
       const prev = lastSetsFor(ex.exId, w.id);
+      const showDemo = state.settings.showDemos !== false;
       return `<section class="ex-card" data-ei="${ei}">
-        <header><div class="grow tap" data-info="${esc(ex.exId)}"><h3>${esc(ex.name)}</h3>
+        ${showDemo ? demo(x, { minimize: true }) : ''}
+        <header>${showDemo ? '' : demo(x, { thumb: true })}<div class="grow tap" data-info="${esc(ex.exId)}"><h3>${esc(ex.name)}</h3>
           <div class="hint">${ex.target ? `Target ${esc(ex.target)} · ` : ''}rest ${fmtClock(ex.rest)}</div></div>
           <button class="btn ghost sm" data-exmenu="${ei}" aria-label="Exercise options">•••</button></header>
         <table class="sets"><thead><tr><th>Set</th><th>Last</th><th>${unit}</th><th>${timed ? 'Sec' : 'Reps'}</th><th></th></tr></thead><tbody>
@@ -397,6 +398,11 @@ export function renderWorkout(root) {
     save();
   };
   root.onclick = async e => {
+    if (e.target.closest('[data-demomin],[data-demoshow]')) {
+      state.settings.showDemos = !!e.target.closest('[data-demoshow]');
+      save();
+      return renderWorkout(root);
+    }
     const t = e.target.closest('[data-act],[data-tick],[data-addset],[data-exmenu],[data-setmenu],[data-info]');
     if (!t) return;
     const d = t.dataset;
@@ -508,7 +514,7 @@ function finishWorkout() {
   showWorkout(w, true);
 }
 
-function showWorkout(w, justFinished = false) {
+export function showWorkout(w, justFinished = false) {
   if (!w) return;
   sheet(justFinished ? 'Workout complete' : w.name, (body, close) => {
     const sets = w.exercises.reduce((n, e) => n + e.sets.filter(s => !s.warm).length, 0);
