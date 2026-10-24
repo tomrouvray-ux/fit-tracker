@@ -4,6 +4,7 @@ import { state, save, flush, replaceState, latestWeight, dayKey } from './store.
 import { esc, toast, confirmSheet, fmtDate, fmtTime, fmtInt } from './ui.js';
 import { syncIntervals } from './garmin.js';
 import { applyTheme, rerender } from './app.js';
+import { syncNow, syncStatus } from './sync.js';
 
 const ACTIVITY = [[1.2, 'Desk job, little exercise'], [1.375, 'Light: 1–3 sessions a week'], [1.55, 'Moderate: 3–5 sessions a week'], [1.725, 'Very active: 6–7 sessions a week'], [1.9, 'Athlete: twice a day']];
 const GOALS = [[-750, 'Lose fast (−0.75 kg/week)'], [-500, 'Lose (−0.5 kg/week)'], [-250, 'Lose slowly'], [0, 'Maintain'], [250, 'Gain slowly'], [500, 'Gain']];
@@ -15,6 +16,14 @@ function suggestedCalories() {
   if (!lw || !p.heightCm || !p.age) return null;
   const bmr = 10 * lw.kg + 6.25 * p.heightCm - 5 * p.age + (p.sex === 'female' ? -161 : 5);
   return Math.round((bmr * p.activity + (p.goal || 0)) / 10) * 10;
+}
+
+function syncLine() {
+  const s = state.settings;
+  if (!s.ghToken) return 'Off. This device keeps its own data.';
+  if (syncStatus.error) return esc(syncStatus.error);
+  if (syncStatus.busy) return 'Syncing…';
+  return s.syncLast ? `Last synced ${fmtDate(s.syncLast)} at ${fmtTime(s.syncLast)}. Syncs when the app opens and a few seconds after each change.` : 'Not synced yet.';
 }
 
 export function renderSettings(root) {
@@ -56,6 +65,14 @@ export function renderSettings(root) {
       <label class="field"><span>Model</span>${sel('model', MODELS, s.aiModel)}</label>
     </div>
 
+    <div class="section-title">Food search</div>
+    <div class="card">
+      <p class="small muted" style="margin-top:0">Search uses UK everyday foods (built in, works offline), Open Food Facts for branded products, and the USDA database. The USDA works without a key for about 30 searches an hour. For more, get a free key at <a href="https://fdc.nal.usda.gov/api-key-signup" target="_blank" rel="noopener">fdc.nal.usda.gov</a>.</p>
+      <label class="field"><span>Products from</span>${sel('region', [['uk', 'UK shops'], ['world', 'Everywhere']], s.foodRegion)}</label>
+      <label class="field"><span>USDA API key (optional)</span><input type="password" id="ukey" value="${esc(s.usdaKey)}" placeholder="Uses DEMO_KEY if empty" autocomplete="off"></label>
+      <label class="check"><input type="checkbox" id="usdaon" ${s.usdaOff ? '' : 'checked'}> Include USDA results</label>
+    </div>
+
     <div class="section-title">Garmin</div>
     <div class="card">
       <p class="small muted" style="margin-top:0">Garmin's own API is only open to approved companies, so the app reads your Garmin data through <a href="https://intervals.icu" target="_blank" rel="noopener">Intervals.icu</a>, a free site that syncs with Garmin Connect. In Intervals.icu open Settings, connect Garmin, then under Developer Settings copy your API key and athlete ID.</p>
@@ -77,16 +94,24 @@ export function renderSettings(root) {
       <label class="check"><input type="checkbox" id="sound" ${s.restSound ? 'checked' : ''}> Beep when rest is over</label>
     </div>
 
+    <div class="section-title">Sync between devices</div>
+    <div class="card">
+      <p class="small muted" style="margin-top:0">Keeps your food, workouts, weights and settings the same on your phone and computer, using a private Gist on your GitHub account. <a href="https://github.com/settings/tokens/new?scopes=gist&description=FitTrack%20sync" target="_blank" rel="noopener">Create a token</a> with only the <b>gist</b> box ticked, then paste it here on each device. API keys are not synced.</p>
+      <label class="field"><span>GitHub token</span><input type="password" id="ghtok" value="${esc(s.ghToken)}" placeholder="ghp_..." autocomplete="off"></label>
+      <button class="btn block" data-act="gsync" ${s.ghToken ? '' : 'disabled'}>Sync now</button>
+      <p class="small muted" id="syncst">${syncLine()}</p>
+    </div>
+
     <div class="section-title">Your data</div>
     <div class="card">
-      <p class="small muted" style="margin-top:0">Everything is stored in this browser on this device. Export a backup now and then, and import it to move to another device.</p>
+      <p class="small muted" style="margin-top:0">Everything is stored in this browser on this device. Export a backup now and then, as a copy you keep yourself.</p>
       <div class="btn-row">
         <button class="btn" data-act="export">Export backup</button>
         <label class="btn">Import backup<input type="file" accept="application/json,.json" id="importf" hidden></label>
       </div>
       <button class="btn danger block" style="margin-top:10px" data-act="reset">Erase all data</button>
     </div>
-    <p class="small muted" style="text-align:center">Exercise library: free-exercise-db (public domain). Food data: Open Food Facts (ODbL).</p>`;
+    <p class="small muted" style="text-align:center">Exercise library: free-exercise-db (public domain). Food data: McCance and Widdowson's CoFID (Open Government Licence v3.0), Open Food Facts (ODbL) and USDA FoodData Central (public domain).</p>`;
 
   const num = id => parseFloat(root.querySelector('#' + id).value);
   const showMacros = () => {
@@ -114,6 +139,14 @@ export function renderSettings(root) {
     if (id === 'goal') p.goal = +v;
     if (id === 'akey') s.anthropicKey = v.trim();
     if (id === 'model') s.aiModel = v;
+    if (id === 'region') s.foodRegion = v;
+    if (id === 'ukey') s.usdaKey = v.trim();
+    if (id === 'usdaon') s.usdaOff = !e.target.checked;
+    if (id === 'ghtok') {
+      const t = v.trim();
+      if (t !== s.ghToken) { s.ghToken = t; s.gistId = ''; }
+      root.querySelector('[data-act=gsync]').disabled = !t;
+    }
     if (id === 'ikey') { s.icuKey = v.trim(); root.querySelector('[data-act=sync]').disabled = !s.icuKey; }
     if (id === 'iath') s.icuAthlete = v.trim() || '0';
     if (id === 'idays') s.icuDays = Math.min(365, num('idays') || 30);
@@ -142,11 +175,20 @@ export function renderSettings(root) {
       try { await syncIntervals({ days: s.icuDays }); } catch (err) { toast(err.message, 6000); }
       rerender();
     }
+    if (a === 'gsync') {
+      t.disabled = true;
+      t.innerHTML = '<span class="spinner"></span> Syncing…';
+      await flush();
+      await syncNow();
+      if (syncStatus.error) toast(syncStatus.error, 6000); else toast('Synced');
+      rerender();
+    }
     if (a === 'export') {
       await flush();
       const copy = JSON.parse(JSON.stringify(state));
       copy.settings.anthropicKey = '';
       copy.settings.icuKey = '';
+      copy.settings.ghToken = '';
       const blob = new Blob([JSON.stringify(copy)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       Object.assign(document.createElement('a'), { href: url, download: `fittrack-backup-${dayKey()}.json` }).click();
@@ -170,6 +212,8 @@ export function renderSettings(root) {
       if (!(await confirmSheet('Replace your data?', 'Everything on this device will be replaced by the backup. Your API keys are kept.', 'Replace'))) return;
       data.settings.anthropicKey = data.settings.anthropicKey || s.anthropicKey;
       data.settings.icuKey = data.settings.icuKey || s.icuKey;
+      data.settings.ghToken = s.ghToken;
+      data.settings.gistId = s.gistId;
       await replaceState(data);
       location.reload();
     } catch (err) {

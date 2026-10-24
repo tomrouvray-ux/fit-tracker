@@ -1,8 +1,8 @@
 // Offline support: cache the app shell, always go to the network for APIs.
-const CACHE = 'fittrack-v3';
+const CACHE = 'fittrack-v5';
 const SHELL = [
-  './', 'index.html', 'css/app.css', 'manifest.webmanifest', 'data/exercises.json',
-  'js/app.js', 'js/store.js', 'js/ui.js', 'js/exercises.js', 'js/train.js', 'js/food.js', 'js/off.js',
+  './', 'index.html', 'css/app.css', 'manifest.webmanifest', 'data/exercises.json', 'data/foods-uk.json',
+  'js/app.js', 'js/store.js', 'js/ui.js', 'js/exercises.js', 'js/train.js', 'js/food.js', 'js/off.js', 'js/foodsearch.js', 'js/sync.js',
   'js/ai.js', 'js/garmin.js', 'js/fileimport.js', 'js/today.js', 'js/progress.js', 'js/settings.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
 ];

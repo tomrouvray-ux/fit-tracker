@@ -25,6 +25,12 @@ export function defaultState() {
       icuAthlete: '0',
       icuLastSync: null,
       icuDays: 30,
+      foodRegion: 'uk',
+      usdaKey: '',
+      usdaOff: false,
+      ghToken: '',
+      gistId: '',
+      syncLast: null,
     },
     routines: [],
     customExercises: [],
@@ -88,10 +94,25 @@ export async function load() {
   return state;
 }
 
+// Other stores (the sync base copy) live beside the state.
+export async function kvGet(key) {
+  try { return await idbGet(key); } catch (e) {
+    try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (e2) { return null; }
+  }
+}
+export async function kvSet(key, val) {
+  try { await idbSet(key, val); } catch (e) {
+    try { localStorage.setItem(key, JSON.stringify(val)); } catch (e2) {}
+  }
+}
+
 let timer = null;
+let onChange = null;
+export const setOnChange = fn => { onChange = fn; };
 export function save() {
   clearTimeout(timer);
   timer = setTimeout(flush, 250);
+  if (onChange) onChange();
 }
 
 export async function flush() {
@@ -102,8 +123,10 @@ export async function flush() {
   }
 }
 
-export function replaceState(next) {
+export async function replaceState(next) {
   state = merge(defaultState(), next);
+  // Forget the last synced copy so sync merges rather than treating missing items as deleted.
+  await kvSet('syncBase', null);
   return flush();
 }
 
