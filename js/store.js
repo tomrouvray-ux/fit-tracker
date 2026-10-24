@@ -42,6 +42,7 @@ export function defaultState() {
     water: {},
     recentFoods: [],
     myFoods: [],
+    meals: [],
     activities: [],
     wellness: {},
   };
