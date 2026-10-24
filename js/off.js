@@ -1,5 +1,7 @@
 // Open Food Facts: free, open product database with barcodes.
 
+import { state } from './store.js';
+
 const FIELDS = 'code,product_name,product_name_en,brands,nutriments,serving_size,serving_quantity,quantity';
 
 function toFood(p) {
@@ -30,8 +32,11 @@ function toFood(p) {
   };
 }
 
+// The uk. subdomain limits results to products sold in the UK.
+const host = () => (state.settings.foodRegion === 'world' ? 'world' : 'uk') + '.openfoodfacts.org';
+
 export async function searchOFF(q, signal) {
-  const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=25&fields=${FIELDS}`;
+  const url = `https://${host()}/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=50&fields=${FIELDS}`;
   const r = await fetch(url, { signal });
   if (!r.ok) throw new Error('Food search is busy. Try again shortly.');
   const j = await r.json();

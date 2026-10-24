@@ -3,6 +3,7 @@
 import { state, save, uid, dayKey, addDays, parseDay, MEALS, entryTotals, dayFoodTotals, dayExerciseKcal, macroGoals } from './store.js';
 import { esc, sheet, toast, confirmSheet, ring, bar, r0, r1, fmtInt, resizeImage } from './ui.js';
 import { searchOFF, lookupBarcode } from './off.js';
+import { loadUK, searchUK, searchUSDA, rank } from './foodsearch.js';
 import { analyzeFood, hasKey } from './ai.js';
 import { go, rerender } from './app.js';
 
@@ -229,9 +230,12 @@ export function openAddFood(meal = defaultMeal(), tab = 'search') {
   }, { onClose: () => { stopCamera(); rerender(); } });
 }
 
+const SOURCE_LABEL = { uk: 'UK food data', usda: 'USDA', off: 'Open Food Facts' };
+
 function foodRow(f, i) {
+  const meta = f.brand || (f.source === 'uk' || f.source === 'usda' ? SOURCE_LABEL[f.source] : '');
   return `<li class="tap" data-i="${i}"><div class="grow"><div class="title">${esc(f.name)}</div>
-    <div class="sub">${f.brand ? esc(f.brand) + ' · ' : ''}${r0(f.per100.kcal)} kcal/100g${f.servingG ? ` · serving ${r0(f.servingG)} g` : ''}</div></div></li>`;
+    <div class="sub">${meta ? esc(meta) + ' · ' : ''}${r0(f.per100.kcal)} kcal/100g${f.servingG ? ` · serving ${r0(f.servingG)} g` : ''}</div></div></li>`;
 }
 
 function searchTab(pane, meal, finish) {
@@ -239,46 +243,81 @@ function searchTab(pane, meal, finish) {
     <form id="sf" class="row"><input type="search" id="q" placeholder="Search foods or brands" autocomplete="off" class="grow"><button class="btn primary">Search</button></form>
     <div id="res"></div>`;
   const res = pane.querySelector('#res');
+  const q = pane.querySelector('#q');
+  // Each section is an array of foods, 'loading', or an error message string.
+  let sec = {};
   let items = [];
-  let ctrl;
-  const local = q => {
-    const ql = q.toLowerCase();
-    const pool = [...state.myFoods.map(f => ({ ...f, mine: true })), ...state.recentFoods];
+  let ctrl, timer;
+
+  const local = term => {
+    const pool = [...state.myFoods, ...state.recentFoods];
     const seen = new Set();
-    return pool.filter(f => {
+    const uniq = pool.filter(f => {
       const k = (f.name + '|' + (f.brand || '')).toLowerCase();
       if (seen.has(k)) return false;
       seen.add(k);
-      return !ql || k.includes(ql);
-    }).slice(0, 20);
+      return true;
+    });
+    return (term ? rank(term, uniq) : uniq).slice(0, term ? 8 : 20);
   };
-  const draw = (title, list, extra = '') => {
-    items = list;
-    res.innerHTML = `${extra}${list.length ? `<div class="section-title">${title}</div><div class="card" style="padding:4px 14px"><ul class="list">${list.map(foodRow).join('')}</ul></div>` : ''}`;
-  };
-  const aiButton = q => q && hasKey() ? `<button class="btn block" data-ai style="margin-top:10px">Estimate “${esc(q)}” with AI</button>` : '';
-  draw('Recent and saved', local(''), state.recentFoods.length ? '' : '<p class="muted small">Search Open Food Facts, scan a barcode, or snap a photo and let AI log it.</p>');
 
-  const q = pane.querySelector('#q');
-  q.oninput = () => draw('Recent and saved', local(q.value.trim()), aiButton(q.value.trim()));
-  pane.querySelector('#sf').onsubmit = async e => {
+  const block = (title, v, empty) => {
+    if (v === undefined) return '';
+    if (v === 'loading') return `<div class="section-title">${title}</div><p class="muted small"><span class="spinner"></span> Searching…</p>`;
+    if (typeof v === 'string') return `<div class="section-title">${title}</div><p class="notice warn">${esc(v)}</p>`;
+    if (!v.length) return empty ? `<div class="section-title">${title}</div><p class="muted small">${empty}</p>` : '';
+    const start = items.length;
+    items.push(...v);
+    return `<div class="section-title">${title}</div><div class="card" style="padding:4px 14px"><ul class="list">${v.map((f, i) => foodRow(f, start + i)).join('')}</ul></div>`;
+  };
+
+  const draw = () => {
+    const term = q.value.trim();
+    items = [];
+    const aiBtn = term && hasKey() ? `<button class="btn block" data-ai style="margin-top:10px">Estimate “${esc(term)}” with AI</button>` : '';
+    res.innerHTML = `
+      ${!term && !state.recentFoods.length ? '<p class="muted small">Type a food, scan a barcode, or snap a photo and let AI log it.</p>' : ''}
+      ${block(term ? 'Your foods' : 'Recent and saved', sec.mine)}
+      ${block('Everyday foods', sec.uk)}
+      ${block(state.settings.foodRegion === 'world' ? 'Products' : 'UK products', sec.off, 'No products found.')}
+      ${block('USDA database', sec.usda, 'Nothing found.')}
+      ${aiBtn}`;
+  };
+
+  const remote = term => {
+    if (ctrl) ctrl.abort();
+    ctrl = new AbortController();
+    const signal = ctrl.signal;
+    sec.off = 'loading';
+    sec.usda = state.settings.usdaOff ? undefined : 'loading';
+    draw();
+    const done = (k, p) => p.then(v => { sec[k] = v; }, err => { if (err.name !== 'AbortError') sec[k] = err.message; })
+      .then(() => { if (!signal.aborted && q.value.trim() === term) draw(); });
+    done('off', searchOFF(term, signal).then(list => rank(term, list, { keepAll: true }).slice(0, 25)));
+    if (!state.settings.usdaOff) done('usda', searchUSDA(term, signal).then(list => list.slice(0, 20)));
+  };
+
+  const update = () => {
+    const term = q.value.trim();
+    clearTimeout(timer);
+    if (ctrl) ctrl.abort();
+    sec = { mine: local(term), uk: term ? searchUK(term) : undefined };
+    draw();
+    // Wait for a pause in typing before asking the online databases (they rate-limit).
+    if (term.length >= 3) timer = setTimeout(() => remote(term), 700);
+  };
+
+  loadUK().then(() => { if (q.value.trim()) update(); });
+  sec = { mine: local('') };
+  draw();
+  q.oninput = update;
+  pane.querySelector('#sf').onsubmit = e => {
     e.preventDefault();
     const term = q.value.trim();
     if (!term) return;
-    if (ctrl) ctrl.abort();
-    ctrl = new AbortController();
-    const mine = local(term);
-    res.innerHTML = '<p class="muted"><span class="spinner"></span> Searching…</p>';
-    try {
-      const found = await searchOFF(term, ctrl.signal);
-      items = [...mine, ...found];
-      res.innerHTML = `${aiButton(term)}
-        ${mine.length ? `<div class="section-title">Recent and saved</div><div class="card" style="padding:4px 14px"><ul class="list">${mine.map(foodRow).join('')}</ul></div>` : ''}
-        <div class="section-title">Open Food Facts</div>
-        <div class="card" style="padding:4px 14px"><ul class="list">${found.map((f, i) => foodRow(f, i + mine.length)).join('') || '<li class="empty">No products found. Try fewer words, or use AI.</li>'}</ul></div>`;
-    } catch (err) {
-      if (err.name !== 'AbortError') res.innerHTML = `<p class="notice warn">${esc(err.message)}</p>${aiButton(term)}`;
-    }
+    clearTimeout(timer);
+    q.blur();
+    remote(term);
   };
   res.onclick = e => {
     if (e.target.closest('[data-ai]')) return describeWithAI(pane, meal, finish, q.value.trim());

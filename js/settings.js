@@ -56,6 +56,14 @@ export function renderSettings(root) {
       <label class="field"><span>Model</span>${sel('model', MODELS, s.aiModel)}</label>
     </div>
 
+    <div class="section-title">Food search</div>
+    <div class="card">
+      <p class="small muted" style="margin-top:0">Search uses UK everyday foods (built in, works offline), Open Food Facts for branded products, and the USDA database. The USDA works without a key for about 30 searches an hour. For more, get a free key at <a href="https://fdc.nal.usda.gov/api-key-signup" target="_blank" rel="noopener">fdc.nal.usda.gov</a>.</p>
+      <label class="field"><span>Products from</span>${sel('region', [['uk', 'UK shops'], ['world', 'Everywhere']], s.foodRegion)}</label>
+      <label class="field"><span>USDA API key (optional)</span><input type="password" id="ukey" value="${esc(s.usdaKey)}" placeholder="Uses DEMO_KEY if empty" autocomplete="off"></label>
+      <label class="check"><input type="checkbox" id="usdaon" ${s.usdaOff ? '' : 'checked'}> Include USDA results</label>
+    </div>
+
     <div class="section-title">Garmin</div>
     <div class="card">
       <p class="small muted" style="margin-top:0">Garmin's own API is only open to approved companies, so the app reads your Garmin data through <a href="https://intervals.icu" target="_blank" rel="noopener">Intervals.icu</a>, a free site that syncs with Garmin Connect. In Intervals.icu open Settings, connect Garmin, then under Developer Settings copy your API key and athlete ID.</p>
@@ -86,7 +94,7 @@ export function renderSettings(root) {
       </div>
       <button class="btn danger block" style="margin-top:10px" data-act="reset">Erase all data</button>
     </div>
-    <p class="small muted" style="text-align:center">Exercise library: free-exercise-db (public domain). Food data: Open Food Facts (ODbL).</p>`;
+    <p class="small muted" style="text-align:center">Exercise library: free-exercise-db (public domain). Food data: McCance and Widdowson's CoFID (Open Government Licence v3.0), Open Food Facts (ODbL) and USDA FoodData Central (public domain).</p>`;
 
   const num = id => parseFloat(root.querySelector('#' + id).value);
   const showMacros = () => {
@@ -114,6 +122,9 @@ export function renderSettings(root) {
     if (id === 'goal') p.goal = +v;
     if (id === 'akey') s.anthropicKey = v.trim();
     if (id === 'model') s.aiModel = v;
+    if (id === 'region') s.foodRegion = v;
+    if (id === 'ukey') s.usdaKey = v.trim();
+    if (id === 'usdaon') s.usdaOff = !e.target.checked;
     if (id === 'ikey') { s.icuKey = v.trim(); root.querySelector('[data-act=sync]').disabled = !s.icuKey; }
     if (id === 'iath') s.icuAthlete = v.trim() || '0';
     if (id === 'idays') s.icuDays = Math.min(365, num('idays') || 30);

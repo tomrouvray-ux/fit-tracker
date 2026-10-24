@@ -14,7 +14,7 @@ Your data stays on your device. There is no server and no account.
 
 **Food**
 - A daily diary for breakfast, lunch, dinner and snacks, with calories left (goal − food + exercise) and protein, carbs and fat.
-- Search Open Food Facts, scan a barcode, or reuse recent and saved foods.
+- Search about 3,000 everyday UK foods instantly (works offline), plus UK products from Open Food Facts and generic foods from USDA FoodData Central. Scan a barcode, or reuse recent and saved foods.
 - **Photo logging:** take a photo of your plate or a label and Claude lists each item with an estimated portion and macros. You check and adjust the grams before anything is saved. You can also type what you ate ("2 eggs on toast") and Claude estimates it.
 - Quick add, copy a meal from yesterday, and a water tracker.
 - A calorie goal calculator (Mifflin–St Jeor).
@@ -53,5 +53,5 @@ Then open http://localhost:8000.
 ## Credits
 
 - Exercises: [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (public domain).
-- Food data: [Open Food Facts](https://world.openfoodfacts.org) (ODbL).
+- Food data: McCance and Widdowson's [Composition of Foods Integrated Dataset](https://www.gov.uk/government/publications/composition-of-foods-integrated-dataset-cofid) (Open Government Licence v3.0), built into `data/foods-uk.json` by `tools/build_cofid.py`; [Open Food Facts](https://world.openfoodfacts.org) (ODbL); [USDA FoodData Central](https://fdc.nal.usda.gov) (public domain).
 - Workout flow inspired by [openGym](https://github.com/DuarteSantos8/openGym).
