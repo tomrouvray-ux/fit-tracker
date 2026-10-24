@@ -1,5 +1,5 @@
 // Offline support: cache the app shell, always go to the network for APIs.
-const CACHE = 'fittrack-v2';
+const CACHE = 'fittrack-v3';
 const SHELL = [
   './', 'index.html', 'css/app.css', 'manifest.webmanifest', 'data/exercises.json',
   'js/app.js', 'js/store.js', 'js/ui.js', 'js/exercises.js', 'js/train.js', 'js/food.js', 'js/off.js',
@@ -8,7 +8,8 @@ const SHELL = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // no-cache: revalidate with the server so a new install never copies stale files from the HTTP cache.
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: 'no-cache' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
@@ -20,7 +21,7 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   if (url.origin === location.origin) {
     // Network first so updates arrive, cache as fallback for offline.
-    e.respondWith(fetch(e.request).then(r => {
+    e.respondWith(fetch(e.request, { cache: 'no-cache' }).then(r => {
       const copy = r.clone();
       caches.open(CACHE).then(c => c.put(e.request, copy));
       return r;

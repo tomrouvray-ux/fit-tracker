@@ -72,7 +72,16 @@ async function start() {
   go(state.activeWorkout ? 'workout' : saved || 'today');
   runRest();
   autoSync();
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => reg.update()).catch(() => {});
+    // When a new version takes over, reload once so the new files are used straight away.
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloaded || state.activeWorkout) return;
+      reloaded = true;
+      flush().then(() => location.reload());
+    });
+  }
 }
 
 start();
