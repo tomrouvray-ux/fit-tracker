@@ -109,14 +109,18 @@ async function gh(path, opts = {}) {
   return r.json();
 }
 
+// The oldest FitTrack Gist is the shared one. If two devices each made one before seeing the
+// other's, they both settle on the oldest.
 async function findGist() {
+  const found = [];
   for (let page = 1; page <= 5; page++) {
     const list = await gh(`/gists?per_page=100&page=${page}`);
-    if (!list || !list.length) return null;
-    const g = list.find(x => x.description === DESC && x.files && x.files[FILE]);
-    if (g) return g.id;
+    if (!list || !list.length) break;
+    found.push(...list.filter(x => x.description === DESC && x.files && x.files[FILE]));
+    if (list.length < 100) break;
   }
-  return null;
+  found.sort((a, b) => a.created_at.localeCompare(b.created_at));
+  return found.length ? found[0].id : null;
 }
 
 async function readGist(id) {
@@ -135,14 +139,22 @@ export const syncOn = () => !!state.settings.ghToken;
 async function run() {
   const s = state.settings;
   let remote = null;
-  if (!s.gistId) s.gistId = (await findGist()) || '';
+  let base = await kvGet(BASE);
+  let extra = null;
+  const shared = await findGist();
+  if (shared && s.gistId && shared !== s.gistId) {
+    // This device was using its own Gist: fold it into the shared one and remove the duplicate.
+    extra = { id: s.gistId, data: await readGist(s.gistId) };
+    base = null;
+  }
+  if (shared) s.gistId = shared;
   if (s.gistId) {
     remote = await readGist(s.gistId);
-    if (remote === undefined) { s.gistId = ''; remote = null; await kvSet(BASE, null); }
+    if (remote === undefined) { s.gistId = ''; remote = null; base = null; }
   }
-  const base = await kvGet(BASE);
   const local = pick(state);
-  const merged = remote ? merge(base, local, remote) : local;
+  let merged = remote ? merge(base, local, remote) : local;
+  if (extra && extra.data) merged = merge(null, merged, extra.data);
   const text = JSON.stringify(merged);
   // Something was logged while GitHub answered: start again rather than overwrite it.
   if (!same(pick(state), local)) { again = true; return; }
@@ -157,6 +169,7 @@ async function run() {
     else s.gistId = (await gh('/gists', { method: 'POST', body: JSON.stringify({ ...JSON.parse(body), public: false }) })).id;
   }
   await kvSet(BASE, merged);
+  if (extra) await gh('/gists/' + extra.id, { method: 'DELETE' }).catch(() => {});
   s.syncLast = Date.now();
   save();
   if (!same(merged, local)) onApplied();
@@ -192,4 +205,7 @@ export function startSync(applied) {
   onApplied = applied;
   syncNow();
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') syncNow(); });
+  // A computer keeps the app visible in a window, so also check on focus and once a minute.
+  window.addEventListener('focus', () => syncNow());
+  setInterval(() => { if (document.visibilityState === 'visible') syncNow(); }, 60000);
 }
