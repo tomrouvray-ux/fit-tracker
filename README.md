@@ -34,11 +34,15 @@ Your data stays on your device. There is no server and no account.
 3. **Claude key, for photo logging.** Create an API key at [platform.claude.com](https://platform.claude.com/settings/keys) and paste it into Settings → AI food photos. Each photo costs about a cent.
 4. **Garmin.** Sign up free at [intervals.icu](https://intervals.icu), connect Garmin Connect in its settings, then copy the API key and athlete ID from Developer Settings into FitTrack's Settings → Garmin.
 
+5. **Sync between phone and computer (optional).** [Create a GitHub token](https://github.com/settings/tokens/new?scopes=gist&description=FitTrack%20sync) with only the `gist` scope and paste it into Settings → Sync between devices on each device.
+
 Garmin only gives its official API to approved companies, which is why the app goes through Intervals.icu.
 
 ## Your data
 
 Everything is saved in the browser on the device you use, in IndexedDB. Use Settings → Export backup now and then, and Import backup to move to a new phone. Backups leave out your API keys.
+
+With sync on, the app also keeps a copy in a private Gist called "FitTrack sync" on your GitHub account. It syncs when the app opens and a few seconds after each change. Each sync merges this device, the Gist and the last copy both agreed on, so food, workouts and weights added or deleted on either device are kept. If the same item is edited on both devices before they sync, this device's version wins. API keys and the in-progress workout stay on each device.
 
 ## Running locally
 

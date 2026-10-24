@@ -1,6 +1,6 @@
 // Router and startup.
 
-import { load, state, flush } from './store.js';
+import { load, state, flush, setOnChange } from './store.js';
 import { $, $$ } from './ui.js';
 import { loadLibrary } from './exercises.js';
 import { renderTrain, renderWorkout, runRest } from './train.js';
@@ -9,6 +9,7 @@ import { renderActivity, autoSync } from './garmin.js';
 import { renderToday } from './today.js';
 import { renderProgress } from './progress.js';
 import { renderSettings } from './settings.js';
+import { startSync, changed } from './sync.js';
 
 const ROUTES = {
   today: { title: 'Today', tab: 'today', render: renderToday },
@@ -72,6 +73,13 @@ async function start() {
   go(state.activeWorkout ? 'workout' : saved || 'today');
   runRest();
   autoSync();
+  setOnChange(changed);
+  // When another device's changes arrive, redraw unless something is being edited.
+  startSync(() => {
+    applyTheme();
+    const typing = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+    if (!typing && !document.querySelector('.sheet-bg')) rerender();
+  });
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => reg.update()).catch(() => {});
     // When a new version takes over, reload once so the new files are used straight away.
