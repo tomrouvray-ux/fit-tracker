@@ -228,9 +228,6 @@ tr.done .tick { background: var(--accent); color: var(--accent-ink); border-colo
 
 /* Exercise library */
 .ex-thumb { width: 52px; height: 52px; border-radius: 10px; object-fit: cover; background: var(--surface-2); flex: none; }
-.ex-imgs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.ex-imgs img { width: 100%; border-radius: 10px; background: var(--surface-2); }
-.ex-imgs.anim { grid-template-columns: 1fr; }
 
 /* Photo */
 .photo-prev { width: 100%; max-height: 260px; object-fit: cover; border-radius: 12px; display: block; }
@@ -261,3 +258,46 @@ details summary { cursor: pointer; color: var(--muted); font-size: 14px; padding
   .grid3 { gap: 6px; }
   .macros { gap: 8px; }
 }
+
+/* Exercise demos: the two library photos crossfade like a GIF. */
+.demo { position: relative; aspect-ratio: 3 / 2; background: #fff; border-radius: 12px; overflow: hidden; }
+.demo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.demo img + img { animation: demo-swap 2.4s ease-in-out infinite; }
+.demo.paused img + img { animation-play-state: paused; }
+@keyframes demo-swap { 0%, 38% { opacity: 0; } 50%, 88% { opacity: 1; } 100% { opacity: 0; } }
+.demo .demo-btns { position: absolute; left: 8px; right: 8px; bottom: 8px; display: flex; justify-content: space-between; pointer-events: none; }
+.demo .demo-btns button { pointer-events: auto; border: 0; border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 600; background: rgba(60, 60, 67, .55); color: #fff; }
+.demo.thumb { width: 52px; height: 52px; aspect-ratio: auto; border-radius: 10px; flex: none; }
+.demo.thumb img { object-fit: cover; }
+.ex-card .demo:not(.thumb) { margin: 0 0 10px; }
+
+/* This week strip */
+.week-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.week-head b { font-size: 14px; font-weight: 600; color: var(--muted); }
+.week-head button { border: 0; background: none; color: var(--text); font-size: 20px; padding: 2px 10px; }
+.week { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; gap: 2px; }
+.week button { border: 0; background: none; color: var(--text); padding: 4px 0 6px; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.week .wd { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; }
+.week .dn { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 16px; border: 2px solid transparent; }
+.week .today .dn { color: var(--accent); }
+.week .sel .dn { background: var(--accent); color: var(--accent-ink); }
+.week .dots { display: flex; gap: 3px; height: 6px; }
+.week .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.week .dots i.plan { background: var(--warn); }
+.day-items { margin-top: 8px; }
+.day-row { display: flex; align-items: center; gap: 12px; background: var(--surface-2); border-radius: 12px; padding: 10px 12px; margin-top: 8px; }
+.day-row .ic { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); font-size: 20px; flex: none; }
+.day-row .ic.plan { background: var(--accent-soft); color: var(--accent); }
+.day-row .k { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--muted); letter-spacing: .04em; }
+.day-row .t { font-weight: 600; }
+
+/* Muscle map */
+:root { --m-good: #3fb96b; --body-off: color-mix(in srgb, var(--muted) 30%, var(--surface)); --body-base: color-mix(in srgb, var(--muted) 14%, var(--surface)); }
+.seg.sm button { padding: 5px 6px; font-size: 13px; }
+.body-map { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px auto 4px; max-width: 360px; }
+.body-fig { width: 100%; height: auto; display: block; }
+.body-fig polygon { stroke: var(--surface); stroke-width: .5; transition: fill .3s; }
+.mlegend { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+.mlegend .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-left: 6px; }
+.mchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.mchips .chip b { color: var(--text); }
