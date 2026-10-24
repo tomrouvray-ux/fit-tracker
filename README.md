@@ -1,3 +1,57 @@
-# fit-tracker
+# FitTrack
 
-Health and fitness tracker.
+A health and fitness tracker that runs in the browser and installs as an app on your phone. It logs gym workouts the way openGym does, keeps a food diary like MyFitnessPal, logs a meal from a photo with Claude, and pulls in your Garmin activities.
+
+Your data stays on your device. There is no server and no account.
+
+## Features
+
+**Train**
+- Routines for each weekday, with three starter plans (Push/Pull/Legs, Upper/Lower, Full Body) that you can edit.
+- Guided sessions: weights and reps carry over from last time, a rest timer runs after each set and beeps when it ends, and the screen stays awake.
+- Detects personal records from estimated 1RM, marks warm-up sets, and lets you add, swap and reorder exercises mid-session.
+- A library of 870+ exercises with photos and how-to steps, searchable by muscle and equipment. You can add your own exercises too.
+
+**Food**
+- A daily diary for breakfast, lunch, dinner and snacks, with calories left (goal − food + exercise) and protein, carbs and fat.
+- Search Open Food Facts, scan a barcode, or reuse recent and saved foods.
+- **Photo logging:** take a photo of your plate or a label and Claude lists each item with an estimated portion and macros. You check and adjust the grams before anything is saved. You can also type what you ate ("2 eggs on toast") and Claude estimates it.
+- Quick add, copy a meal from yesterday, and a water tracker.
+- A calorie goal calculator (Mifflin–St Jeor).
+
+**Activity (Garmin)**
+- Syncs activities, steps, sleep, resting HR, HRV and weight from Garmin through [Intervals.icu](https://intervals.icu). It syncs when the app opens and when you tap Sync.
+- You can also import `.fit`, `.zip` (Garmin Connect's "Export Original"), `.gpx` and `.tcx` files, or add an activity by hand.
+- Garmin calories can count toward your daily food budget.
+
+**Progress**
+- Body weight trend, calories over the last 14 days, training hours per week, a 26-week consistency heatmap and recent PRs.
+
+## Setup
+
+1. **Host it.** In this repo go to Settings → Pages, set Source to "Deploy from a branch", pick `main` and `/ (root)`, then save. The app goes live at `https://tomrouvray-ux.github.io/fit-tracker/`.
+2. **Install it.** On an iPhone, open the link in Safari, tap Share, then Add to Home Screen. On a Mac in Chrome, use Install in the address bar.
+3. **Claude key, for photo logging.** Create an API key at [platform.claude.com](https://platform.claude.com/settings/keys) and paste it into Settings → AI food photos. Each photo costs about a cent.
+4. **Garmin.** Sign up free at [intervals.icu](https://intervals.icu), connect Garmin Connect in its settings, then copy the API key and athlete ID from Developer Settings into FitTrack's Settings → Garmin.
+
+Garmin only gives its official API to approved companies, which is why the app goes through Intervals.icu.
+
+## Your data
+
+Everything is saved in the browser on the device you use, in IndexedDB. Use Settings → Export backup now and then, and Import backup to move to a new phone. Backups leave out your API keys.
+
+## Running locally
+
+It is a static site with no build step:
+
+```sh
+python3 -m http.server 8000
+```
+
+Then open http://localhost:8000.
+
+## Credits
+
+- Exercises: [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (public domain).
+- Food data: [Open Food Facts](https://world.openfoodfacts.org) (ODbL).
+- Workout flow inspired by [openGym](https://github.com/DuarteSantos8/openGym).
