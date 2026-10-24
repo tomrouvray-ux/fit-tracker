@@ -5,7 +5,6 @@ import { esc, fmtDuration, fmtTime, fmtInt, sheet } from './ui.js';
 import { summaryCard, openAddFood } from './food.js';
 import { workoutVolume, showWorkout, startWorkout } from './train.js';
 import { getExercise, demo } from './exercises.js';
-import { muscleCard, bindMuscles } from './muscles.js';
 import { actIcon, activitySub } from './garmin.js';
 import { logWeight } from './progress.js';
 import { go } from './app.js';
@@ -24,8 +23,6 @@ export function renderToday(root) {
 
     ${weekCard(key)}
 
-    ${muscleCard()}
-
     ${well && (well.steps || well.sleepSecs || well.restingHR || well.hrv) ? `<div class="card"><h2>Garmin <small>${state.wellness[key] ? 'today' : 'yesterday'}</small></h2><div class="stats">
       ${well.steps ? `<div class="stat"><b>${fmtInt(well.steps)}</b><span>Steps</span></div>` : ''}
       ${well.sleepSecs ? `<div class="stat"><b>${fmtDuration(well.sleepSecs)}</b><span>Sleep${well.sleepScore ? ` · ${well.sleepScore}` : ''}</span></div>` : ''}
@@ -37,7 +34,6 @@ export function renderToday(root) {
       <div class="row between"><b style="font-size:24px" class="num">${lw ? `${toDisplayW(lw.kg)} ${wUnit()}` : '–'}</b>
       <button class="btn sm" data-act="weight">Log weight</button></div></div>`;
 
-  bindMuscles(root);
   root.onclick = e => {
     const t = e.target.closest('[data-act],[data-wk],[data-day],[data-wid],[data-start],[data-routine]');
     if (!t) return;

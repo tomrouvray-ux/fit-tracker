@@ -10,6 +10,7 @@ Your data stays on your device. There is no server and no account.
 - Routines for each weekday, with three starter plans (Push/Pull/Legs, Upper/Lower, Full Body) that you can edit.
 - Guided sessions: weights and reps carry over from last time, a rest timer runs after each set and beeps when it ends, and the screen stays awake.
 - Detects personal records from estimated 1RM, marks warm-up sets, and lets you add, swap and reorder exercises mid-session.
+- A muscle map on the Train tab with three views: balance (sets per muscle over a week, 30 or 90 days), fatigue (recent sets, recovering over about three days) and strength (change in estimated 1RM over the last 30 days). Garmin activities count too, at one set per 10 minutes for the muscles each sport works.
 - A library of 870+ exercises with animated demos (the start and end photos play like a GIF) and how-to steps, searchable by muscle and equipment. You can add your own exercises too.
 
 **Food**
@@ -26,7 +27,6 @@ Your data stays on your device. There is no server and no account.
 
 **Today**
 - A "This week" strip: tap a day to see the workout you did or have planned, and start today's routine from there.
-- A muscle map with three views: balance (sets per muscle over a week, 30 or 90 days), fatigue (recent sets, recovering over about three days) and strength (change in estimated 1RM over the last 30 days).
 
 **Progress**
 - Body weight trend, calories over the last 14 days, training hours per week, a 26-week consistency heatmap and recent PRs.

@@ -22,7 +22,27 @@ const RANGES = { week: 7, '30d': 30, '90d': 90, all: Infinity };
 let tab = 'balance';
 let range = 'week';
 
-// Calls fn(muscle, share, set, workout) for every working set; secondary muscles count half.
+// Muscles worked by Garmin activities, which have no sets: [type pattern, main muscles, supporting muscles].
+const ACTIVITY_MUSCLES = [
+  [/Run/, ['quadriceps', 'hamstrings', 'calves', 'glutes'], ['abdominals']],
+  [/Ride|Cycl|Spin/, ['quadriceps', 'glutes'], ['hamstrings', 'calves']],
+  [/Walk|Hike|Mountaineer|Snowshoe|Stair/, ['calves', 'quadriceps', 'glutes'], ['hamstrings']],
+  [/Swim/, ['lats', 'shoulders'], ['triceps', 'chest', 'abdominals', 'middle back']],
+  [/Row|Kayak|Canoe|Paddle/, ['lats', 'middle back', 'quadriceps'], ['biceps', 'glutes', 'hamstrings', 'shoulders']],
+  [/Ski|Skate|Snowboard/, ['quadriceps', 'glutes'], ['calves', 'hamstrings', 'abdominals']],
+  [/Climb/, ['lats', 'forearms', 'biceps'], ['shoulders', 'middle back', 'abdominals']],
+  [/Tennis|Padel|Squash|Badminton|Pickle/, ['shoulders', 'quadriceps', 'calves'], ['forearms', 'abdominals', 'glutes']],
+  [/Soccer|Football|Basketball|Rugby|Hockey|Netball/, ['quadriceps', 'hamstrings', 'calves', 'glutes'], ['abdominals']],
+  [/Yoga|Pilates/, ['abdominals'], ['shoulders', 'hamstrings', 'glutes', 'lower back']],
+  [/Elliptical/, ['quadriceps', 'glutes'], ['hamstrings', 'calves', 'shoulders']],
+  [/Weight|Strength|Crossfit|HIIT/, [], ['chest', 'lats', 'shoulders', 'quadriceps', 'glutes', 'hamstrings']],
+];
+
+// A Garmin strength session logged at the same time as a FitTrack workout is the same session.
+const overlapsWorkout = (start, end) => state.workouts.some(w => w.end && start < w.end + 1800000 && end > w.start - 1800000);
+
+// Calls fn(muscle, share, set, workout, exercise) for every working set; secondary muscles count half.
+// Garmin activities count as one set per 10 minutes for the main muscles (set and exercise are null).
 function eachSet(since, fn) {
   for (const w of state.workouts) {
     if (!w.end || w.start < since) continue;
@@ -35,6 +55,16 @@ function eachSet(since, fn) {
         for (const m of x.s || []) fn(m, 0.5, s, w, e);
       }
     }
+  }
+  for (const a of state.activities) {
+    if (a.start < since || !a.durationSec) continue;
+    const rule = ACTIVITY_MUSCLES.find(([re]) => re.test(a.type || ''));
+    if (!rule) continue;
+    const span = { start: a.start, end: a.start + (a.elapsedSec || a.durationSec) * 1000 };
+    if (/Weight|Strength/.test(a.type) && overlapsWorkout(span.start, span.end)) continue;
+    const sets = a.durationSec / 600;
+    for (const m of rule[1]) fn(m, sets, null, span, null);
+    for (const m of rule[2]) fn(m, sets / 2, null, span, null);
   }
 }
 
@@ -57,7 +87,7 @@ function strength() {
   const now = Date.now();
   const best = {};
   eachSet(now - 60 * DAY, (m, k, s, w, e) => {
-    if (k < 1) return;
+    if (!s || k < 1) return;
     const v = e1rm(s.w, s.r);
     if (!v) return;
     const key = m + '|' + e.exId;
@@ -101,7 +131,7 @@ function view() {
     fills = shapeFills(values, v => (v > 0 ? mix(30 + 70 * v / max, 'var(--accent)') : ''));
     const ranked = Object.entries(values).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
     const missing = Object.keys(SHAPES).filter(m => !values[m]);
-    legend = 'Sets worked, counting secondary muscles as half a set.';
+    legend = 'Sets worked, counting secondary muscles as half a set. Garmin activities count as one set per 10 minutes.';
     list = ranked.length
       ? `<div class="mchips">${ranked.map(([m, v]) => `<span class="chip">${esc(label(m))} <b>${Math.round(v * 2) / 2}</b></span>`).join('')}</div>
          ${missing.length ? `<p class="small muted" style="margin:8px 0 0">Not trained: ${missing.map(label).join(', ')}.</p>` : ''}`
