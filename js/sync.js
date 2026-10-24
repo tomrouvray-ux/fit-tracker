@@ -21,6 +21,7 @@ const LISTS = {
   weights: x => x.date,
   recentFoods: foodKey,
   myFoods: foodKey,
+  meals: x => x.id,
 };
 const MAPS = ['water', 'wellness'];
 

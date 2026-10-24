@@ -75,7 +75,9 @@ export function renderFood(root) {
             <span class="kcal">${fmtInt(x.kcal)}</span></li>`;
         }).join('')}</ul>` : ''}
         <div class="row" style="margin-top:6px"><button class="btn ghost" data-add="${m}">+ Add food</button>
-          <span class="grow"></span>${!list.length && (state.foods[addDays(key, -1)] || []).some(e => e.meal === m) ? `<button class="btn ghost" data-copy="${m}">Copy yesterday</button>` : ''}</div>
+          ${state.meals.length ? `<button class="btn ghost" data-meals="${m}">★ Meals</button>` : ''}
+          <span class="grow"></span>${list.length ? `<button class="btn ghost" data-savemeal="${m}">☆ Save meal</button>`
+            : (state.foods[addDays(key, -1)] || []).some(e => e.meal === m) ? `<button class="btn ghost" data-copy="${m}">Copy yesterday</button>` : ''}</div>
       </div>`;
     }).join('')}
     <div class="card"><h2>Water <small>${fmtInt(water)} / ${fmtInt(state.settings.waterGoal)} ml</small></h2>
@@ -88,11 +90,13 @@ export function renderFood(root) {
     </div></div>`;
 
   root.onclick = async e => {
-    const b = e.target.closest('[data-day],[data-add],[data-entry],[data-water],[data-copy]');
+    const b = e.target.closest('[data-day],[data-add],[data-entry],[data-water],[data-copy],[data-meals],[data-savemeal]');
     if (!b) return;
     const d = b.dataset;
     if (d.day) { foodDay = addDays(foodDay, +d.day); return renderFood(root); }
     if (d.add) return openAddFood(d.add);
+    if (d.meals) return openAddFood(d.meals, 'meals');
+    if (d.savemeal) return saveMeal(entries.filter(x => x.meal === d.savemeal), d.savemeal);
     if (d.entry) return editEntry(entries.find(x => x.id === d.entry));
     if (d.water) { state.water[key] = Math.max(0, water + +d.water); save(); return renderFood(root); }
     if (d.copy) {
@@ -101,6 +105,73 @@ export function renderFood(root) {
       save(); toast(`Copied ${src.length} item${src.length === 1 ? '' : 's'}`); renderFood(root);
     }
   };
+}
+
+// ---------- favourite meals ----------
+
+const ITEM_KEYS = ['name', 'brand', 'code', 'source', 'per100', 'servingG', 'servingLabel', 'amount', 'unit', 'gramsPerUnit'];
+const mealTotals = m => m.items.reduce((t, e) => { const x = entryTotals(e); for (const k in t) t[k] += x[k]; return t; }, { kcal: 0, p: 0, c: 0, f: 0 });
+
+function saveMeal(list, meal) {
+  if (!list.length) return;
+  const guess = list.length === 1 ? list[0].name : `${MEAL_LABEL[meal]}: ${list.slice(0, 2).map(e => e.name.split(',')[0]).join(' and ')}${list.length > 2 ? ' and more' : ''}`;
+  sheet('Save as a favourite meal', (body, close) => {
+    body.innerHTML = `
+      <p class="small muted" style="margin-top:0">${list.length} item${list.length === 1 ? '' : 's'}, ${fmtInt(list.reduce((n, e) => n + entryTotals(e).kcal, 0))} kcal. Add it again in one tap from the Meals tab.</p>
+      <label class="field"><span>Name</span><input type="text" id="mname" value="${esc(guess)}"></label>
+      <button class="btn primary block" id="msave">Save meal</button>`;
+    const input = body.querySelector('#mname');
+    input.select();
+    body.querySelector('#msave').onclick = () => {
+      const name = input.value.trim() || guess;
+      state.meals.unshift({ id: uid(), name, items: list.map(e => Object.fromEntries(ITEM_KEYS.map(k => [k, e[k]]))) });
+      save(); close(); toast(`Saved "${name}"`); rerender();
+    };
+  });
+}
+
+function addMeal(m, meal) {
+  const time = Date.now();
+  (state.foods[foodDay] = state.foods[foodDay] || []).push(...m.items.map(it => ({ ...it, id: uid(), meal, time })));
+  save();
+  toast(`Added ${m.name} to ${MEAL_LABEL[meal]}`);
+}
+
+function mealsTab(pane, meal, finish) {
+  const draw = () => {
+    pane.innerHTML = state.meals.length ? `<ul class="list">${state.meals.map(m => {
+      const t = mealTotals(m);
+      return `<li><div class="grow tap" data-open="${m.id}"><div class="title">${esc(m.name)}</div>
+        <div class="sub">${m.items.length} item${m.items.length === 1 ? '' : 's'} · P ${r0(t.p)} C ${r0(t.c)} F ${r0(t.f)}</div></div>
+        <span class="kcal">${fmtInt(t.kcal)}</span><button class="btn primary sm" data-addmeal="${m.id}">Add</button></li>`;
+    }).join('')}</ul>`
+      : '<p class="muted small" style="margin:0">No favourite meals yet. Log a meal, then tap <b>☆ Save meal</b> on that section of the food diary to keep it here.</p>';
+  };
+  const open = m => {
+    const t = mealTotals(m);
+    pane.innerHTML = `
+      <button class="btn ghost sm" data-back>‹ All meals</button>
+      <label class="field" style="margin-top:8px"><span>Name</span><input type="text" id="mrename" value="${esc(m.name)}"></label>
+      <ul class="list">${m.items.map(e => `<li><div class="grow"><div class="title">${esc(e.name)}</div><div class="sub">${esc(amountLabel(e))}${e.brand ? ' · ' + esc(e.brand) : ''}</div></div>
+        <span class="kcal">${fmtInt(entryTotals(e).kcal)}</span></li>`).join('')}</ul>
+      <p class="small muted">Total ${fmtInt(t.kcal)} kcal · P ${r0(t.p)} C ${r0(t.c)} F ${r0(t.f)}</p>
+      <button class="btn primary block" data-addmeal="${m.id}">Add to ${MEAL_LABEL[meal]}</button>
+      <button class="btn danger block" style="margin-top:8px" data-delmeal="${m.id}">Delete meal</button>`;
+    pane.querySelector('#mrename').onchange = e => { m.name = e.target.value.trim() || m.name; save(); };
+  };
+  pane.onclick = async e => {
+    const t = e.target.closest('[data-open],[data-addmeal],[data-delmeal],[data-back]');
+    if (!t) return;
+    const m = state.meals.find(x => x.id === (t.dataset.open || t.dataset.addmeal || t.dataset.delmeal));
+    if (t.dataset.back) return draw();
+    if (t.dataset.open) return open(m);
+    if (t.dataset.addmeal) { addMeal(m, meal); return finish(); }
+    if (t.dataset.delmeal && await confirmSheet('Delete this meal?', `"${m.name}" is removed from your favourites. Food you've already logged stays in your diary.`)) {
+      state.meals = state.meals.filter(x => x.id !== m.id);
+      save(); draw();
+    }
+  };
+  draw();
 }
 
 function amountLabel(e) {
@@ -215,15 +286,16 @@ export function openAddFood(meal = defaultMeal(), tab = 'search') {
     const finish = () => { close(); rerender(); };
     body.innerHTML = `
       <div class="seg" role="tablist">
-        <button data-tab="search">Search</button><button data-tab="photo">Photo</button>
-        <button data-tab="scan">Barcode</button><button data-tab="quick">Quick add</button>
+        <button data-tab="search">Search</button><button data-tab="meals">Meals</button><button data-tab="photo">Photo</button>
+        <button data-tab="scan">Barcode</button><button data-tab="quick">Quick</button>
       </div>
       <div id="tab" style="margin-top:12px"></div>`;
     const pane = body.querySelector('#tab');
     const show = t => {
       stopCamera();
+      pane.onclick = null;
       body.querySelectorAll('[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
-      ({ search: searchTab, photo: photoTab, scan: scanTab, quick: quickTab })[t](pane, meal, finish);
+      ({ search: searchTab, meals: mealsTab, photo: photoTab, scan: scanTab, quick: quickTab })[t](pane, meal, finish);
     };
     body.querySelector('.seg').onclick = e => e.target.dataset.tab && show(e.target.dataset.tab);
     show(tab);

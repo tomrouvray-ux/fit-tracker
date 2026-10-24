@@ -17,6 +17,7 @@ Your data stays on your device. There is no server and no account.
 - A daily diary for breakfast, lunch, dinner and snacks, with calories left (goal − food + exercise) and protein, carbs and fat.
 - Search about 3,000 everyday UK foods instantly (works offline), plus UK products from Open Food Facts and generic foods from USDA FoodData Central. Scan a barcode, or reuse recent and saved foods.
 - **Photo logging:** take a photo of your plate or a label and Claude lists each item with an estimated portion and macros. You check and adjust the grams before anything is saved. You can also type what you ate ("2 eggs on toast") and Claude estimates it.
+- Favourite meals: tap ☆ Save meal on any section, then add the whole meal to breakfast, lunch, dinner or snacks in one tap from ★ Meals.
 - Quick add, copy a meal from yesterday, and a water tracker.
 - A calorie goal calculator (Mifflin–St Jeor).
 
