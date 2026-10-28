@@ -7,7 +7,11 @@ import { applyTheme, rerender } from './app.js';
 import { syncNow, syncStatus } from './sync.js';
 
 const ACTIVITY = [[1.2, 'Desk job, little exercise'], [1.375, 'Light: 1–3 sessions a week'], [1.55, 'Moderate: 3–5 sessions a week'], [1.725, 'Very active: 6–7 sessions a week'], [1.9, 'Athlete: twice a day']];
-const GOALS = [[-750, 'Lose fast (−0.75 kg/week)'], [-500, 'Lose (−0.5 kg/week)'], [-250, 'Lose slowly'], [0, 'Maintain'], [250, 'Gain slowly'], [500, 'Gain']];
+const GOALS = [[-750, 'Lose fast (−0.75 kg/week)'], [-500, 'Lose (−0.5 kg/week)'], [-250, 'Lose slowly'], [0, 'Maintain'], [250, 'Gain slowly'], [500, 'Gain'], ['recomp', 'Build muscle and lose fat']];
+
+// Recomposition: a small deficit with high protein, so you can lose fat while lifting builds muscle.
+const RECOMP_DEFICIT = -250;
+const RECOMP_MACROS = { p: 35, c: 40, f: 25 };
 const MODELS = [['claude-opus-5-5', 'Claude Opus 5.5 (most accurate)'], ['claude-sonnet-5-5', 'Claude Sonnet 5.5 (cheaper)'], ['claude-haiku-5-5', 'Claude Haiku 5.5 (cheapest)']];
 
 function suggestedCalories() {
@@ -15,7 +19,8 @@ function suggestedCalories() {
   const lw = latestWeight();
   if (!lw || !p.heightCm || !p.age) return null;
   const bmr = 10 * lw.kg + 6.25 * p.heightCm - 5 * p.age + (p.sex === 'female' ? -161 : 5);
-  return Math.round((bmr * p.activity + (p.goal || 0)) / 10) * 10;
+  const delta = p.goal === 'recomp' ? RECOMP_DEFICIT : +p.goal || 0;
+  return Math.round((bmr * p.activity + delta) / 10) * 10;
 }
 
 function syncLine() {
@@ -24,6 +29,13 @@ function syncLine() {
   if (syncStatus.error) return esc(syncStatus.error);
   if (syncStatus.busy) return 'Syncing…';
   return s.syncLast ? `Last synced ${fmtDate(s.syncLast)} at ${fmtTime(s.syncLast)}. Syncs when the app opens and a few seconds after each change.` : 'Not synced yet.';
+}
+
+function suggestText(sug) {
+  const recomp = state.settings.profile.goal === 'recomp';
+  return `Suggested: <b>${fmtInt(sug)} kcal</b> (Mifflin–St Jeor, using your latest weight)${recomp
+    ? `, a small deficit of ${-RECOMP_DEFICIT} kcal. Using it also sets macros to ${RECOMP_MACROS.p}% protein, ${RECOMP_MACROS.c}% carbs and ${RECOMP_MACROS.f}% fat. Lift weights at least 3 times a week and aim for about 2 g of protein per kg of body weight.`
+    : '.'} <button class="btn sm" data-act="use">Use this</button>`;
 }
 
 export function renderSettings(root) {
@@ -55,7 +67,7 @@ export function renderSettings(root) {
       <label class="field"><span>Height (cm)</span><input type="number" inputmode="numeric" id="height" value="${p.heightCm || ''}"></label>
       <label class="field"><span>Activity</span>${sel('activity', ACTIVITY, p.activity)}</label>
       <label class="field"><span>Goal</span>${sel('goal', GOALS, p.goal)}</label>
-      <p id="sugg">${sug ? `Suggested: <b>${fmtInt(sug)} kcal</b> (Mifflin–St Jeor, using your latest weight). <button class="btn sm" data-act="use">Use this</button>` : '<span class="small muted">Log your weight on the Today tab to get a suggestion.</span>'}</p>
+      <p id="sugg">${sug ? suggestText(sug) : '<span class="small muted">Log your weight on the Today tab to get a suggestion.</span>'}</p>
     </details>
 
     <div class="section-title">AI food photos</div>
@@ -136,7 +148,7 @@ export function renderSettings(root) {
     if (id === 'age') p.age = num('age') || null;
     if (id === 'height') p.heightCm = num('height') || null;
     if (id === 'activity') p.activity = +v;
-    if (id === 'goal') p.goal = +v;
+    if (id === 'goal') p.goal = v === 'recomp' ? 'recomp' : +v;
     if (id === 'akey') s.anthropicKey = v.trim();
     if (id === 'model') s.aiModel = v;
     if (id === 'region') s.foodRegion = v;
@@ -159,7 +171,7 @@ export function renderSettings(root) {
     if (['mp', 'mc', 'mf', 'kcal'].includes(id)) showMacros();
     if (['sex', 'age', 'height', 'activity', 'goal'].includes(id) && e.type === 'change') {
       const sug = suggestedCalories();
-      if (sug) root.querySelector('#sugg').innerHTML = `Suggested: <b>${fmtInt(sug)} kcal</b> (Mifflin–St Jeor, using your latest weight). <button class="btn sm" data-act="use">Use this</button>`;
+      if (sug) root.querySelector('#sugg').innerHTML = suggestText(sug);
     }
     if (id === 'units' && e.type === 'change') rerender();
   };
@@ -168,7 +180,12 @@ export function renderSettings(root) {
     const t = e.target.closest('[data-act]');
     if (!t) return;
     const a = t.dataset.act;
-    if (a === 'use') { s.calorieGoal = suggestedCalories(); save(); rerender(); toast('Calorie goal updated'); }
+    if (a === 'use') {
+      s.calorieGoal = suggestedCalories();
+      if (p.goal === 'recomp') s.macroPct = { ...RECOMP_MACROS };
+      save(); rerender();
+      toast(p.goal === 'recomp' ? 'Calorie goal and macros updated' : 'Calorie goal updated');
+    }
     if (a === 'sync') {
       t.disabled = true;
       t.innerHTML = '<span class="spinner"></span> Syncing…';

@@ -57,8 +57,13 @@ async function icuGet(path) {
   return r.json();
 }
 
+const HISTORY_DAYS = 182;
+
 export async function syncIntervals({ days = state.settings.icuDays || 30, quiet = false } = {}) {
   if (!state.settings.icuKey) throw new Error('Add your Intervals.icu API key in Settings first.');
+  // The first sync on a device fetches six months, so the consistency heatmap and trends have history.
+  const backfill = !state.settings.icuHistoryDone;
+  if (backfill) days = Math.max(days, HISTORY_DAYS);
   const oldest = addDays(dayKey(), -days);
   const newest = addDays(dayKey(), 1);
   const [acts, well] = await Promise.all([
@@ -92,6 +97,7 @@ export async function syncIntervals({ days = state.settings.icuDays || 30, quiet
     if (w.weight && !state.weights.some(x => x.date === w.id)) state.weights.push({ date: w.id, kg: w.weight, source: 'garmin' });
   }
   state.settings.icuLastSync = Date.now();
+  if (backfill) state.settings.icuHistoryDone = true;
   save();
   if (!quiet) toast(added ? `Synced ${added} new activit${added === 1 ? 'y' : 'ies'}` : 'Up to date');
   return added;

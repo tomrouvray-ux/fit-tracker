@@ -26,6 +26,7 @@ export function defaultState() {
       icuAthlete: '0',
       icuLastSync: null,
       icuDays: 30,
+      icuHistoryDone: false,
       foodRegion: 'uk',
       usdaKey: '',
       usdaOff: false,
