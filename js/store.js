@@ -17,6 +17,8 @@ export function defaultState() {
       showDemos: true,
       calorieGoal: 2200,
       macroPct: { p: 30, c: 40, f: 30 },
+      autoGoal: true,
+      macroMode: 'weight',
       waterGoal: 2500,
       addExerciseCalories: true,
       profile: { sex: 'male', age: 35, heightCm: 178, activity: 1.375, goal: 0 },
@@ -189,9 +191,38 @@ export function dayExerciseKcal(key) {
   return Math.round(k);
 }
 
+// Goals from body weight. Recomposition (build muscle and lose fat) is a small deficit with more protein.
+export const RECOMP_DEFICIT = -250;
+const FAT_PER_KG = 0.8;
+export const proteinPerKg = () => (state.settings.profile.goal === 'recomp' ? 2 : 1.6);
+
+// Mifflin–St Jeor from the latest weight, adjusted for the goal.
+export function suggestedCalories() {
+  const p = state.settings.profile;
+  const lw = latestWeight();
+  if (!lw || !p.heightCm || !p.age) return null;
+  const bmr = 10 * lw.kg + 6.25 * p.heightCm - 5 * p.age + (p.sex === 'female' ? -161 : 5);
+  const delta = p.goal === 'recomp' ? RECOMP_DEFICIT : +p.goal || 0;
+  return Math.round((bmr * p.activity + delta) / 10) * 10;
+}
+
+// With autoGoal on, the calorie goal follows the latest weight; otherwise it's the number typed in.
+export function calorieGoal() {
+  const s = state.settings;
+  return (s.autoGoal && suggestedCalories()) || s.calorieGoal;
+}
+
+// Protein and fat in grams per kg of the latest weight, carbs fill the remaining calories.
+// Falls back to the percentage split when there's no weight or that mode is chosen.
 export function macroGoals() {
   const s = state.settings;
-  const kcal = s.calorieGoal;
+  const kcal = calorieGoal();
+  const lw = latestWeight();
+  if (s.macroMode !== 'pct' && lw) {
+    const p = Math.round(lw.kg * proteinPerKg());
+    const f = Math.round(lw.kg * FAT_PER_KG);
+    return { kcal, p, f, c: Math.max(0, Math.round((kcal - p * 4 - f * 9) / 4)), byWeight: true };
+  }
   return {
     kcal,
     p: Math.round(kcal * s.macroPct.p / 100 / 4),

@@ -1,6 +1,6 @@
 // Settings: goals, units, API keys, backup.
 
-import { state, save, flush, replaceState, latestWeight, dayKey } from './store.js';
+import { state, save, flush, replaceState, latestWeight, dayKey, parseDay, suggestedCalories, calorieGoal, macroGoals, proteinPerKg, RECOMP_DEFICIT, toDisplayW, wUnit } from './store.js';
 import { esc, toast, confirmSheet, fmtDate, fmtTime, fmtInt } from './ui.js';
 import { syncIntervals } from './garmin.js';
 import { applyTheme, rerender } from './app.js';
@@ -9,19 +9,21 @@ import { syncNow, syncStatus } from './sync.js';
 const ACTIVITY = [[1.2, 'Desk job, little exercise'], [1.375, 'Light: 1–3 sessions a week'], [1.55, 'Moderate: 3–5 sessions a week'], [1.725, 'Very active: 6–7 sessions a week'], [1.9, 'Athlete: twice a day']];
 const GOALS = [[-750, 'Lose fast (−0.75 kg/week)'], [-500, 'Lose (−0.5 kg/week)'], [-250, 'Lose slowly'], [0, 'Maintain'], [250, 'Gain slowly'], [500, 'Gain'], ['recomp', 'Build muscle and lose fat']];
 
-// Recomposition: a small deficit with high protein, so you can lose fat while lifting builds muscle.
-const RECOMP_DEFICIT = -250;
+// Percentage split used for recomposition when macros are set as % of calories.
 const RECOMP_MACROS = { p: 35, c: 40, f: 25 };
 const MODELS = [['claude-opus-5-5', 'Claude Opus 5.5 (most accurate)'], ['claude-sonnet-5-5', 'Claude Sonnet 5.5 (cheaper)'], ['claude-haiku-5-5', 'Claude Haiku 5.5 (cheapest)']];
 
-function suggestedCalories() {
+const ACT_LABEL = Object.fromEntries(ACTIVITY.map(([v, l]) => [v, l.split(':')[0].toLowerCase()]));
+const GOAL_LABEL = Object.fromEntries(GOALS.map(([v, l]) => [v, l.toLowerCase()]));
+
+// What the automatic goal is based on, so wrong details are easy to spot.
+function basisText() {
   const p = state.settings.profile;
   const lw = latestWeight();
-  if (!lw || !p.heightCm || !p.age) return null;
-  const bmr = 10 * lw.kg + 6.25 * p.heightCm - 5 * p.age + (p.sex === 'female' ? -161 : 5);
-  const delta = p.goal === 'recomp' ? RECOMP_DEFICIT : +p.goal || 0;
-  return Math.round((bmr * p.activity + delta) / 10) * 10;
+  return `Based on ${toDisplayW(lw.kg)} ${wUnit()} (${parseDay(lw.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}), ${p.heightCm} cm, age ${p.age}, ${p.sex}, ${ACT_LABEL[p.activity] || 'your'} activity, goal: ${GOAL_LABEL[p.goal] || 'maintain'}.`;
 }
+
+let goalsOpen = false;
 
 function syncLine() {
   const s = state.settings;
@@ -33,6 +35,7 @@ function syncLine() {
 
 function suggestText(sug) {
   const recomp = state.settings.profile.goal === 'recomp';
+  if (state.settings.autoGoal) return `Your goal: <b>${fmtInt(sug)} kcal</b>${recomp ? `, a small deficit of ${-RECOMP_DEFICIT} kcal with about ${proteinPerKg()} g protein per kg. Lift weights at least 3 times a week.` : '.'} It updates automatically from your latest weight.`;
   return `Suggested: <b>${fmtInt(sug)} kcal</b> (Mifflin–St Jeor, using your latest weight)${recomp
     ? `, a small deficit of ${-RECOMP_DEFICIT} kcal. Using it also sets macros to ${RECOMP_MACROS.p}% protein, ${RECOMP_MACROS.c}% carbs and ${RECOMP_MACROS.f}% fat. Lift weights at least 3 times a week and aim for about 2 g of protein per kg of body weight.`
     : '.'} <button class="btn sm" data-act="use">Use this</button>`;
@@ -47,19 +50,22 @@ export function renderSettings(root) {
   root.innerHTML = `
     <div class="section-title">Daily goals</div>
     <div class="card">
-      <label class="field"><span>Calorie goal (kcal)</span><input type="number" inputmode="numeric" id="kcal" value="${s.calorieGoal}"></label>
-      <div class="small muted" style="margin:-4px 0 6px">Macro split (% of calories)</div>
-      <div class="grid3">
-        <label class="field" style="margin:0"><span>Protein</span><input type="number" inputmode="numeric" id="mp" value="${s.macroPct.p}"></label>
-        <label class="field" style="margin:0"><span>Carbs</span><input type="number" inputmode="numeric" id="mc" value="${s.macroPct.c}"></label>
-        <label class="field" style="margin:0"><span>Fat</span><input type="number" inputmode="numeric" id="mf" value="${s.macroPct.f}"></label>
-      </div>
+      <label class="check"><input type="checkbox" id="autogoal" ${s.autoGoal ? 'checked' : ''}> Work out my calorie goal from my latest weight</label>
+      ${s.autoGoal && sug ? `<p style="margin:6px 0 12px"><b class="num" style="font-size:22px">${fmtInt(sug)} kcal</b><br><span class="small muted">${esc(basisText())} Edit these under <b>Work out my calorie goal</b> below. It updates whenever a new weight comes in.</span></p>`
+        : `${s.autoGoal ? '<p class="small muted" style="margin:4px 0 8px">Log your weight on the Today tab and fill in the details below to work this out. Using your own number until then.</p>' : ''}
+          <label class="field"><span>Calorie goal (kcal)</span><input type="number" inputmode="numeric" id="kcal" value="${s.calorieGoal}"></label>`}
+      <label class="field"><span>Protein, carbs and fat</span>${sel('macromode', [['weight', 'From my body weight'], ['pct', 'Percent of calories']], s.macroMode)}</label>
+      ${s.macroMode === 'pct' ? `<div class="grid3">
+        <label class="field" style="margin:0"><span>Protein %</span><input type="number" inputmode="numeric" id="mp" value="${s.macroPct.p}"></label>
+        <label class="field" style="margin:0"><span>Carbs %</span><input type="number" inputmode="numeric" id="mc" value="${s.macroPct.c}"></label>
+        <label class="field" style="margin:0"><span>Fat %</span><input type="number" inputmode="numeric" id="mf" value="${s.macroPct.f}"></label>
+      </div>` : ''}
       <p class="small muted" id="macrog"></p>
       <label class="field"><span>Water goal (ml)</span><input type="number" inputmode="numeric" id="water" value="${s.waterGoal}"></label>
       <label class="check"><input type="checkbox" id="addex" ${s.addExerciseCalories ? 'checked' : ''}> Add Garmin exercise calories to my daily budget</label>
     </div>
 
-    <details class="card"><summary>Work out my calorie goal</summary>
+    <details class="card" id="goaldetails" ${goalsOpen ? 'open' : ''}><summary>Work out my calorie goal</summary>
       <div class="grid2">
         <label class="field"><span>Sex</span>${sel('sex', [['male', 'Male'], ['female', 'Female']], p.sex)}</label>
         <label class="field"><span>Age</span><input type="number" inputmode="numeric" id="age" value="${p.age || ''}"></label>
@@ -126,11 +132,16 @@ export function renderSettings(root) {
     <p class="small muted" style="text-align:center">Exercise library: free-exercise-db (public domain). Food data: McCance and Widdowson's CoFID (Open Government Licence v3.0), Open Food Facts (ODbL) and USDA FoodData Central (public domain).</p>`;
 
   const num = id => parseFloat(root.querySelector('#' + id).value);
+  root.querySelector('#goaldetails').ontoggle = e => { goalsOpen = e.target.open; };
   const showMacros = () => {
+    const g = macroGoals();
     const sum = s.macroPct.p + s.macroPct.c + s.macroPct.f;
-    root.querySelector('#macrog').textContent = sum !== 100
-      ? `These add up to ${sum}%. Make them total 100%.`
-      : `That's ${Math.round(s.calorieGoal * s.macroPct.p / 400)} g protein, ${Math.round(s.calorieGoal * s.macroPct.c / 400)} g carbs, ${Math.round(s.calorieGoal * s.macroPct.f / 900)} g fat.`;
+    const lw = latestWeight();
+    root.querySelector('#macrog').textContent = g.byWeight
+      ? `${g.p} g protein (${proteinPerKg()} g per kg), ${g.f} g fat (0.8 g per kg) and ${g.c} g carbs (the rest of your calories), from ${toDisplayW(lw.kg)} ${wUnit()}.`
+      : s.macroMode !== 'pct' ? 'Log your weight to set these from your body weight. Using 30% protein, 40% carbs and 30% fat until then.'
+      : sum !== 100 ? `These add up to ${sum}%. Make them total 100%.`
+      : `That's ${g.p} g protein, ${g.c} g carbs, ${g.f} g fat.`;
   };
   showMacros();
 
@@ -169,9 +180,14 @@ export function renderSettings(root) {
     if (id === 'sound') s.restSound = e.target.checked;
     save();
     if (['mp', 'mc', 'mf', 'kcal'].includes(id)) showMacros();
+    if (id === 'autogoal') { if (!e.target.checked) s.calorieGoal = calorieGoal(); s.autoGoal = e.target.checked; }
+    if (id === 'macromode') s.macroMode = v;
+    if (['autogoal', 'macromode'].includes(id) && e.type === 'change') { save(); return rerender(); }
     if (['sex', 'age', 'height', 'activity', 'goal'].includes(id) && e.type === 'change') {
       const sug = suggestedCalories();
       if (sug) root.querySelector('#sugg').innerHTML = suggestText(sug);
+      if (s.autoGoal) { save(); return rerender(); }
+      showMacros();
     }
     if (id === 'units' && e.type === 'change') rerender();
   };

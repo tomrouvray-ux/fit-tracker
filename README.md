@@ -19,7 +19,7 @@ Your data stays on your device. There is no server and no account.
 - **Photo logging:** take a photo of your plate or a label and Claude lists each item with an estimated portion and macros. You check and adjust the grams before anything is saved. You can also type what you ate ("2 eggs on toast") and Claude estimates it.
 - Favourite meals: tap ☆ Save meal on any section, then add the whole meal to breakfast, lunch, dinner or snacks in one tap from ★ Meals.
 - Quick add, copy a meal from yesterday, and a water tracker.
-- A calorie goal calculator (Mifflin–St Jeor).
+- A calorie goal worked out from your latest weight (Mifflin–St Jeor) that updates when a new weight comes in, with protein (1.6 g per kg, or 2 g when building muscle and losing fat) and fat (0.8 g per kg) set from body weight and carbs filling the rest. You can switch either to a fixed number or percentages.
 
 **Activity (Garmin)**
 - Syncs activities, steps, sleep, resting HR, HRV and weight from Garmin through [Intervals.icu](https://intervals.icu). It syncs when the app opens and when you tap Sync.

@@ -1,6 +1,6 @@
 // Progress: body weight, calories, training volume, activity heatmap, PRs.
 
-import { state, save, dayKey, addDays, parseDay, toDisplayW, fromDisplayW, wUnit, dayFoodTotals } from './store.js';
+import { state, save, dayKey, addDays, parseDay, toDisplayW, fromDisplayW, wUnit, dayFoodTotals, calorieGoal } from './store.js';
 import { esc, sheet, toast, fmtDate, r0, fmtInt } from './ui.js';
 import { lineChart, e1rm, workoutVolume, showExercise } from './train.js';
 import { getExercise } from './exercises.js';
@@ -100,7 +100,7 @@ export function renderProgress(root) {
       <button class="btn sm" data-act="weight">Log weight</button></div>
 
     <div class="card"><h2>Calories eaten <small>${logged.length ? `avg ${fmtInt(avgCal)} on ${logged.length} logged days` : 'last 14 days'}</small></h2>
-      ${barChart(cal, { goal: state.settings.calorieGoal })}</div>
+      ${barChart(cal, { goal: calorieGoal() })}</div>
 
     <div class="card"><h2>Training hours per week</h2>
       ${barChart(weeks.map(w => ({ v: w.gym + w.act, label: 'Week of ' + w.k, short: fmtDate(parseDay(w.k), { day: 'numeric', month: 'numeric' }) })), { fmt: v => (Math.round(v * 10) / 10) + 'h' })}

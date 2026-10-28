@@ -1,6 +1,6 @@
 // Food diary (MyFitnessPal-style): meals, goals, search, barcode, AI photo logging.
 
-import { state, save, uid, dayKey, addDays, parseDay, MEALS, entryTotals, dayFoodTotals, dayExerciseKcal, macroGoals } from './store.js';
+import { state, save, uid, dayKey, addDays, parseDay, MEALS, entryTotals, dayFoodTotals, dayExerciseKcal, macroGoals, calorieGoal } from './store.js';
 import { esc, sheet, toast, confirmSheet, ring, bar, r0, r1, fmtInt, resizeImage } from './ui.js';
 import { searchOFF, lookupBarcode } from './off.js';
 import { loadUK, searchUK, searchUSDA, rank } from './foodsearch.js';
@@ -26,7 +26,7 @@ function dayLabel(key) {
 
 // Calories left = goal - food + exercise (exercise optional, like MyFitnessPal)
 export function calorieSummary(key) {
-  const goal = state.settings.calorieGoal;
+  const goal = calorieGoal();
   const food = dayFoodTotals(key).kcal;
   const ex = state.settings.addExerciseCalories ? dayExerciseKcal(key) : 0;
   return { goal, food: r0(food), ex, left: r0(goal - food + ex) };
