@@ -10,7 +10,7 @@ const DESC = 'FitTrack sync';
 const BASE = 'syncBase';
 
 // Settings that stay on each device: secrets and sync bookkeeping.
-const LOCAL_SETTINGS = ['anthropicKey', 'icuKey', 'usdaKey', 'ghToken', 'gistId', 'syncLast', 'icuLastSync'];
+const LOCAL_SETTINGS = ['anthropicKey', 'icuKey', 'usdaKey', 'ghToken', 'gistId', 'syncLast', 'icuLastSync', 'icuHistoryDone'];
 
 const foodKey = f => (f.name + '|' + (f.brand || '')).toLowerCase();
 const LISTS = {
